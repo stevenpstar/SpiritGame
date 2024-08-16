@@ -5,7 +5,7 @@
 #include "math.h"
 
 #define DIAGONAL_DAMPER 0.70710678118f
-Player createPlayer(Vector2 position, Texture2D *body_tex, Texture2D *head_tex, Texture2D *cloak_tex, Texture2D *glove_tex) {
+Player createPlayer(Vector2 position, Texture2D *body_tex, Texture2D *head_tex, Texture2D *cloak_tex, Texture2D *glove_tex, Texture2D *shadow_tex) {
 	Vector2 headOffset = (Vector2){ position.x, position.y - 10.0f };
 	Vector2 cloakOffset = (Vector2){ position.x, position.y - 5.0f };
 	Animation playerAnims;
@@ -30,13 +30,14 @@ Player createPlayer(Vector2 position, Texture2D *body_tex, Texture2D *head_tex, 
 		*head_tex,
 		*cloak_tex,
 		*glove_tex,
+		*shadow_tex,
 		playerAnims,
 		IDLE,
 		false
 	};
 }
 
-void handlePlayerMovement(Player* player) {
+void handlePlayerMovement(Player* player, int Objects[32][32]) {
 	float speed = 1.8f;
 	float mov_x = 0.0f;
 	float mov_y = 0.0f;
@@ -61,6 +62,33 @@ void handlePlayerMovement(Player* player) {
 	mov_x *= speed_mod;
 	mov_y *= speed_mod;
 
+	// check object collision
+	float next_x = player->position.x + mov_x + 16;
+	float next_y = player->position.y + mov_y + 32;
+	int px = player->position.x + 16;
+	int py = player->position.y + 32;
+	int x = next_x / 32;
+	int y = next_y / 32;
+	// check right/left
+	if (Objects[y][x] == 1 || Objects[y][x] == 2) {
+		if (next_y >= (y * 32) + 16) {
+			if (mov_x > 0 && (x * 32) + 32 > next_x) {
+				mov_x = 0;
+			}
+			else if (mov_x < 0 && x * 32 < next_x) {
+				mov_x = 0;
+			}
+		}
+	}
+	// check up/down
+	if (Objects[y][x] == 1 || Objects[y][x] == 2) {
+		if (mov_y > 0 && (y * 32) + 16 > next_y) {
+			mov_y = 0;
+		}
+		else if (mov_y < 0 && y * 32 < next_y) {
+			mov_y = 0;
+		}
+	}
 	player->position.x += mov_x;
 	player->position.y += mov_y;
 
@@ -100,6 +128,7 @@ void renderPlayer(Player *player, Rectangle frameRec, Vector2 mousePos) {
 		frameRec.width = -frameRec.width;
 	}
 
+	DrawTextureRec(player->shadow_tex, frameRec, (Vector2) { player->position.x, player->position.y + 16.0f }, WHITE);
 
 	DrawTextureRec(
 		player->cloak_tex,

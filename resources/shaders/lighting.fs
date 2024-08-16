@@ -6,6 +6,8 @@ in vec4 fragColor;
 uniform vec2 u_resolution;
 uniform vec2 player_pos;
 uniform vec2 u_mouse;
+uniform float max_alpha;
+uniform vec3 u_colour;
 
 out vec4 finalColor;
 
@@ -22,13 +24,10 @@ void main() {
       dist = dist_player;
     }
 
-    vec3 color = vec3(0.);
-
-    color = vec3(0.004, 0.031, 0.102);
-    if (dist > 0.9) {
-      dist = 0.9;
+    if (dist > max_alpha) {
+      dist = max_alpha;
     }
 
 
-    finalColor = vec4(color, dist);
+    finalColor = vec4(u_colour, dist);
 }

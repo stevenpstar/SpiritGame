@@ -265,8 +265,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="game.c" />
     <ClCompile Include="player.c" />
-    <ClCompile Include="src\game.c" />
+    <ClCompile Include="src\main.c" />
+    <ClCompile Include="ui.c" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\raylib-master\raylib.vcxproj">
@@ -275,7 +277,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="animation.h" />
+    <ClInclude Include="game.h" />
     <ClInclude Include="player.h" />
+    <ClInclude Include="ui.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -10,11 +10,12 @@ typedef struct Player {
 	Texture2D head_tex;
 	Texture2D cloak_tex;
 	Texture2D glove_tex;
+	Texture2D shadow_tex;
 	Animation animation;
 	int animState;
 	bool isFlipped;
 }Player;
 
-Player createPlayer(Vector2 position, Texture2D* body, Texture2D* helm, Texture2D* cloak, Texture2D* glove);
+Player createPlayer(Vector2 position, Texture2D* body, Texture2D* helm, Texture2D* cloak, Texture2D* glove, Texture2D *shadow_tex);
 void renderPlayer(Player *player, Rectangle frameRec, Vector2 mousePos);
-void handlePlayerMovement(Player* player);
+void handlePlayerMovement(Player* player, int Objects[32][32]);
