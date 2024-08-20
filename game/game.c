@@ -24,6 +24,12 @@ void setPropRect(int propId, Rectangle* propsRect) {
 		propsRect->width = 32.0f;
 		propsRect->height = 32.0f;
 		break;
+	case PILLAR_TALL:
+		propsRect->x = 224.0f;
+		propsRect->y = 64.0f;
+		propsRect->width = 32.0f;
+		propsRect->height = 96.0f;
+		break;
 	default:
 		propsRect->x = 0.0f;
 		propsRect->y = 0.0f;
@@ -39,8 +45,8 @@ void renderGame(GameMap* map, Player player, Rectangle frameRect, Vector2 mouseP
 				map->TileRect.x = (map->Tiles[i][j] - (row * 8)) * 32;
 				map->TileRect.y = (map->Tiles[i][j] / 8) * 32;
 				DrawTextureRec(map->TileTex, map->TileRect, (Vector2) { j * 32, i * 32 }, WHITE);
-				if (map->Objects[i][j] > 2 && map->Objects[i][j] < 5) {
-					setPropRect(map->Objects[i][j], &map->ObjRect);
+				if (map->Objects[i][j].Type > 2 && map->Objects[i][j].Type < 5) {
+					setPropRect(map->Objects[i][j].Type, &map->ObjRect);
 					DrawTextureRec(map->PlantTex, map->ObjRect, (Vector2) { (j * 32), (i * 32)}, WHITE);
 				}
 			}
@@ -48,13 +54,17 @@ void renderGame(GameMap* map, Player player, Rectangle frameRect, Vector2 mouseP
 
 		for (int i = 0; i < MAP_SIZE; i++) {
 			for (int j = 0; j < MAP_SIZE; j++) {
-				if (map->Objects[i][j] > 0) {
-					if (map->Objects[i][j] == 1) {
-						setPropRect(map->Objects[i][j], &map->ObjRect);
-						DrawTextureRec(map->ObjectTex, map->ObjRect, (Vector2) { j * 32, (i * 32) - 32.0f }, WHITE);
+				if (map->Objects[i][j].Type > 0) {
+					if (map->Objects[i][j].Type == 1 || map->Objects[i][j].Type == 6) {
+						setPropRect(map->Objects[i][j].Type, &map->ObjRect);
+						DrawTextureRec(map->ObjectTex, map->ObjRect, (Vector2) { j * 32, (i * 32) - map->ObjRect.height + 32 }, WHITE);
+						if (map->Objects[i][j].Type == 6) {
+							// hard coding this is a mess
+
+						}
 					}
-					else if (map->Objects[i][j] == 2) {
-						setPropRect(map->Objects[i][j], &map->ObjRect);
+					else if (map->Objects[i][j].Type == 2) {
+						setPropRect(map->Objects[i][j].Type, &map->ObjRect);
 						DrawTextureRec(map->PlantShadows, map->ObjRect, (Vector2) { (j * 32) - 64.0f
 							, (i * 32) - 128.0f
 						}, (Color) { 255, 255, 255, 100 });
@@ -93,10 +103,19 @@ GameObject createGameObject(int type) {
 				0
 		};
 		break;
+	case PILLAR_TALL:
+		return (GameObject) {
+			type,
+				10,
+				2,
+				"Magical...",
+				60,
+				0
+		};
 	default:
 		return (GameObject) {
 			EMPTY,
-				0, 0, "\0", 0, 0
+				0, 0, "EMPTY\0", 0, 0
 		};
 	}
 }

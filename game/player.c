@@ -3,9 +3,17 @@
 #include "animation.h"
 #include "raymath.h"
 #include "math.h"
+#include "game.h"
 
 #define DIAGONAL_DAMPER 0.70710678118f
-Player createPlayer(Vector2 position, Texture2D *body_tex, Texture2D *head_tex, Texture2D *cloak_tex, Texture2D *glove_tex, Texture2D *shadow_tex) {
+Player createPlayer(Vector2 position, 
+	Texture2D *body_tex,
+	Texture2D *head_tex,
+	Texture2D *cloak_tex,
+	Texture2D *glove_tex,
+	Texture2D *shadow_tex,
+	Texture2D *bow_tex) {
+
 	Vector2 headOffset = (Vector2){ position.x, position.y - 10.0f };
 	Vector2 cloakOffset = (Vector2){ position.x, position.y - 5.0f };
 	Animation playerAnims;
@@ -31,13 +39,14 @@ Player createPlayer(Vector2 position, Texture2D *body_tex, Texture2D *head_tex, 
 		*cloak_tex,
 		*glove_tex,
 		*shadow_tex,
+		*bow_tex,
 		playerAnims,
 		IDLE,
 		false
 	};
 }
 
-void handlePlayerMovement(Player* player, int Objects[32][32]) {
+void handlePlayerMovement(Player* player, GameObject Objects[32][32]) {
 	float speed = 1.8f;
 	float mov_x = 0.0f;
 	float mov_y = 0.0f;
@@ -70,7 +79,7 @@ void handlePlayerMovement(Player* player, int Objects[32][32]) {
 	int x = next_x / 32;
 	int y = next_y / 32;
 	// check right/left
-	if (Objects[y][x] == 1 || Objects[y][x] == 2) {
+	if (Objects[y][x].Type == 1 || Objects[y][x].Type == 2) {
 		if (next_y >= (y * 32) + 16) {
 			if (mov_x > 0 && (x * 32) + 32 > next_x) {
 				mov_x = 0;
@@ -81,7 +90,7 @@ void handlePlayerMovement(Player* player, int Objects[32][32]) {
 		}
 	}
 	// check up/down
-	if (Objects[y][x] == 1 || Objects[y][x] == 2) {
+	if (Objects[y][x].Type == 1 || Objects[y][x].Type == 2) {
 		if (mov_y > 0 && (y * 32) + 16 > next_y) {
 			mov_y = 0;
 		}
@@ -115,6 +124,8 @@ void renderPlayer(Player *player, Rectangle frameRec, Vector2 mousePos) {
 	float angle = (float)(atan2(deltaY, deltaX) * 180.0f / PI) + 180;
 
 	float xRotBuffer = 2.0f;
+	float bowOffset = 6.0f;
+	float bowRestingAngle = -35;
 	if (mousePos.x < player->position.x) {
 		player->isFlipped = true;
 		angle = angle - 180;
@@ -126,9 +137,20 @@ void renderPlayer(Player *player, Rectangle frameRec, Vector2 mousePos) {
 	}
 	if (player->isFlipped) {
 		frameRec.width = -frameRec.width;
+		bowOffset = -bowOffset;
+		bowRestingAngle = -bowRestingAngle;
 	}
 
 	DrawTextureRec(player->shadow_tex, frameRec, (Vector2) { player->position.x, player->position.y + 16.0f }, WHITE);
+
+	DrawTexturePro(
+		player->bow_tex,
+		(Rectangle) {0.0f, 0.0f, 32.0f, 32.0f},
+		(Rectangle) { player->position.x + 16.0f + bowOffset, player->position.y + 18.0f, 32.0f, frameRec.height },
+		(Vector2) {16.0f, 16.0f},
+		angle + bowRestingAngle,
+		WHITE
+	);
 
 	DrawTextureRec(
 		player->cloak_tex,
@@ -162,5 +184,4 @@ void renderPlayer(Player *player, Rectangle frameRec, Vector2 mousePos) {
 		player->position,
 		WHITE
 	);
-
 }

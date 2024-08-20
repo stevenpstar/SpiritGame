@@ -11,7 +11,7 @@
     #define GLSL_VERSION            100
 #endif
 
-int generateWorld(int world[MAP_SIZE][MAP_SIZE], int objects[MAP_SIZE][MAP_SIZE]) {
+int generateWorld(int world[MAP_SIZE][MAP_SIZE], GameObject objects[MAP_SIZE][MAP_SIZE]) {
 	// generate world tiles randomly
 
 	srand(time(NULL));
@@ -20,16 +20,16 @@ int generateWorld(int world[MAP_SIZE][MAP_SIZE], int objects[MAP_SIZE][MAP_SIZE]
 			int tile = (rand() % 32) + 0;
 			world[i][j] = tile;
 			if (tile < 30) {
-				objects[i][j] = 0;
+				objects[i][j] = createGameObject(EMPTY);
 			}
 			else {
-				objects[i][j] = 2;
+				objects[i][j] = createGameObject(TREE1);
 			}
 		}
 	}
 }
 
-void updateMiniMap(int miniMap[1024], int Tiles[32][32], int Objects[32][32]) {
+void updateMiniMap(int miniMap[1024], int Tiles[32][32], GameObject Objects[32][32]) {
 	int indx = 0;
 	for (int i = 31; i >= 0; i--) {
 		for (int j = 0; j < 32; j++) {
@@ -44,7 +44,7 @@ void updateMiniMap(int miniMap[1024], int Tiles[32][32], int Objects[32][32]) {
 			}
 			indName[sI] = ']';
 			miniMap[indx] = Tiles[i][j];
-			if (Objects[i][j] == 2) {
+			if (Objects[i][j].Type == 2) {
 				miniMap[indx] = 50;
 			}
 
@@ -52,6 +52,11 @@ void updateMiniMap(int miniMap[1024], int Tiles[32][32], int Objects[32][32]) {
 		}
 	}
 }
+
+	// world obj (temporary)
+int grassTiles[MAP_SIZE][MAP_SIZE];
+GameObject worldProps[MAP_SIZE][MAP_SIZE];
+
 
 int main(void) {
 	const int screenWidth = 1920;
@@ -77,6 +82,7 @@ int main(void) {
 	Texture2D head_tex = LoadTexture("resources/head.png");
 	Texture2D cloak_tex = LoadTexture("resources/cloak.png");
 	Texture2D glove_tex = LoadTexture("resources/glove.png");
+	Texture2D bow_tex = LoadTexture("resources/bow.png");
 	Texture2D shadow_tex = LoadTexture("resources/shadowsprite.png");
 	Rectangle shadowRect = { 0.0f, 0.0f, 32.0f, 32.0f };
 
@@ -121,16 +127,16 @@ int main(void) {
 	int playerVarLoc = GetShaderLocation(lightingShader, "player_pos");
 	int mouseVarLoc = GetShaderLocation(lightingShader, "u_mouse");
 
-	// world obj (temporary)
-	int grassTiles[MAP_SIZE][MAP_SIZE];
-	int worldProps[MAP_SIZE][MAP_SIZE];
 	//generateWorld(grassTiles);
 
 	Vector2 position = { 150.0f, 280.0f };
-	Player player = createPlayer(position, &body_tex, &head_tex, &cloak_tex, &glove_tex, &shadow_tex);
+	Player player = createPlayer(position, &body_tex, &head_tex, &cloak_tex, &glove_tex, &shadow_tex, &bow_tex);
 	Rectangle frameRec = { 0.0f, 0.0f, (float)body_tex.width / 3, (float)body_tex.height / 4 };
 	Rectangle grassFrameRec = { 0.0f, 0.0f, 32.0f, 32.0f };
 	int currentFrame = 0;
+	bool buildMode = false;
+	Vector2 arrowPoint = (Vector2){ 0.0f, 0.0f };
+	bool firing = false;
 
 	// Camera settings
 
@@ -158,6 +164,7 @@ int main(void) {
 	// scuffed and unoptimised
 //	int miniMapLoc[1024];
 
+	GameObject hoveredGO = createGameObject(EMPTY);
 
 	int playerPosLoc = GetShaderLocation(miniMapShader, "pp");
 	int miniMapLoc = GetShaderLocation(miniMapShader, "u_map");
@@ -280,84 +287,102 @@ int main(void) {
 		}
 
 		if (IsKeyPressed(KEY_TAB)) {
-			placingProp = !placingProp;
+			if (buildMode)
+				placingProp = !placingProp;
 		}
 
 		// temp position for changing selected inv slot
-		if (IsKeyPressed(KEY_ONE)) {
-			slotSelected = 0;
-			PlaySound(click3Ogg);
+		// build mode toggle horrendous
+		if (IsKeyPressed(KEY_B)) {
+			buildMode = !buildMode;
 		}
-		else if (IsKeyPressed(KEY_TWO)) {
-			slotSelected = 1;
-			PlaySound(click3Ogg);
+		// normal / attack mode inputs
+		if (!buildMode) {
+			if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+				arrowPoint.x = mousePos.x;
+				arrowPoint.y = mousePos.y;
+			}
+			if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
+				firing = true;
+			}
 		}
-		else if (IsKeyPressed(KEY_THREE)) {
-			slotSelected = 2;
-			PlaySound(click3Ogg);
-		}
-		else if (IsKeyPressed(KEY_FOUR)) {
-			slotSelected = 3;
-			PlaySound(click3Ogg);
-		}
-		else if (IsKeyPressed(KEY_FIVE)) {
-			slotSelected = 4;
-			PlaySound(click3Ogg);
-		}
-		else if (IsKeyPressed(KEY_SIX)) {
-			slotSelected = 5;
-			PlaySound(click3Ogg);
-		}
-		else if (IsKeyPressed(KEY_SEVEN)) {
-			slotSelected = 6;
-			PlaySound(click3Ogg);
-		}
-		else if (IsKeyPressed(KEY_EIGHT)) {
-			slotSelected = 7;
-			PlaySound(click3Ogg);
-		}
-		else if (IsKeyPressed(KEY_NINE)) {
-			slotSelected = 8;
-			PlaySound(click3Ogg);
-		}
+		if (buildMode) {
+			if (IsKeyPressed(KEY_ONE)) {
+				slotSelected = 0;
+				PlaySound(click3Ogg);
+			}
+			else if (IsKeyPressed(KEY_TWO)) {
+				slotSelected = 1;
+				PlaySound(click3Ogg);
+			}
+			else if (IsKeyPressed(KEY_THREE)) {
+				slotSelected = 2;
+				PlaySound(click3Ogg);
+			}
+			else if (IsKeyPressed(KEY_FOUR)) {
+				slotSelected = 3;
+				PlaySound(click3Ogg);
+			}
+			else if (IsKeyPressed(KEY_FIVE)) {
+				slotSelected = 4;
+				PlaySound(click3Ogg);
+			}
+			else if (IsKeyPressed(KEY_SIX)) {
+				slotSelected = 5;
+				PlaySound(click3Ogg);
+			}
+			else if (IsKeyPressed(KEY_SEVEN)) {
+				slotSelected = 6;
+				PlaySound(click3Ogg);
+			}
+			else if (IsKeyPressed(KEY_EIGHT)) {
+				slotSelected = 7;
+				PlaySound(click3Ogg);
+			}
+			else if (IsKeyPressed(KEY_NINE)) {
+				slotSelected = 8;
+				PlaySound(click3Ogg);
+			}
 
-		tileId = invRows[selectedRow].item[slotSelected].ItemId;
 
-		if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-			if (!select) { select = true; }
-			if (!playSmoke) { playSmoke = true; }
-			selectFrame = 0;
-			smokeFrame = 0;
-			PlaySound(click2Ogg);
-			trauma = 0.1f;
-			if (!placingProp) {
-				DefaultMap.Tiles[selectTileY][selectTileX] = tileId;
+			tileId = invRows[selectedRow].item[slotSelected].ItemId;
+
+			if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+				if (!select) { select = true; }
+				if (!playSmoke) { playSmoke = true; }
+				selectFrame = 0;
+				smokeFrame = 0;
+				PlaySound(click2Ogg);
+				trauma = 0.1f;
+				if (!placingProp) {
+					DefaultMap.Tiles[selectTileY][selectTileX] = tileId;
+				}
+				else {
+					DefaultMap.Objects[selectTileY][selectTileX] = createGameObject(PILLAR_TALL);
+				}
+				particlePos.x = (selectTileX * 32.0f) - 16.0f;
+				particlePos.y = (selectTileY * 32.0f) - 16.0f;
+				updateMiniMap(miniMapVal, DefaultMap.Tiles, DefaultMap.Objects);
+				SetShaderValueV(miniMapShader, miniMapLoc, miniMapVal, SHADER_UNIFORM_INT, 1024);
 			}
-			else {
-				DefaultMap.Objects[selectTileY][selectTileX] = GRAVE_CROSS;
+			else if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
+				if (!select) { select = true; }
+				if (!playSmoke) { playSmoke = true; }
+				selectFrame = 0;
+				smokeFrame = 0;
+				PlaySound(click2Ogg);
+				trauma = 0.1f;
+				if (!placingProp) {
+					DefaultMap.Tiles[selectTileY][selectTileX] = 0;
+				}
+				else {
+					DefaultMap.Objects[selectTileY][selectTileX] = createGameObject(EMPTY);
+				}
+				particlePos.x = (selectTileX * 32.0f) - 16.0f;
+				particlePos.y = (selectTileY * 32.0f) - 16.0f;
+				updateMiniMap(miniMapVal, DefaultMap.Tiles, DefaultMap.Objects);
+				SetShaderValueV(miniMapShader, miniMapLoc, miniMapVal, SHADER_UNIFORM_INT, 1024);
 			}
-			particlePos.x = (selectTileX * 32.0f) - 16.0f;
-			particlePos.y = (selectTileY * 32.0f) - 16.0f;
-			updateMiniMap(miniMapVal, DefaultMap.Tiles, DefaultMap.Objects);
-			SetShaderValueV(miniMapShader, miniMapLoc, miniMapVal, SHADER_UNIFORM_INT, 1024);
-		}
-		else if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT)) {
-			if (!select) { select = true; }
-			if (!playSmoke) { playSmoke = true;  }
-			selectFrame = 0;
-			smokeFrame = 0;
-			PlaySound(click2Ogg);
-			trauma = 0.1f;
-			if (!placingProp) {
-				DefaultMap.Tiles[selectTileY][selectTileX] = 0;
-			}
-			else {
-				DefaultMap.Objects[selectTileY][selectTileX] = EMPTY;
-			}
-			particlePos.x = (selectTileX * 32.0f) - 16.0f;
-			particlePos.y = (selectTileY * 32.0f) - 16.0f;
-			updateMiniMap(miniMapVal, DefaultMap.Tiles, DefaultMap.Objects);
-			SetShaderValueV(miniMapShader, miniMapLoc, miniMapVal, SHADER_UNIFORM_INT, 1024);
 		}
 
 		if (trauma > 0.0f) {
@@ -477,12 +502,16 @@ int main(void) {
 		BeginMode2D(camera);
 		// render world
 		renderGame(&DefaultMap , player, frameRec, mousePos);
+//		DrawLine(player.position.x, player.position.y, arrowPoint.x, arrowPoint.y, RED);
+		DrawLineEx(player.position, arrowPoint, 5, RED);
 		// render select
-		if (DefaultMap.Objects[selectTileY][selectTileX] != EMPTY) {
+		if (DefaultMap.Objects[selectTileY][selectTileX].Type != EMPTY) {
 			DrawTextureRec(select_tex, selectRect, (Vector2) { selectTileX * 32, selectTileY * 32 }, WHITE);
+			hoveredGO = DefaultMap.Objects[selectTileY][selectTileX];
 		}
 		else {
-			DrawRectangle(selectTileX * 32, selectTileY * 32, 32.0f, 32.0f, (Color) { 255, 255, 255, 50 });
+			if (buildMode)
+				DrawRectangle(selectTileX * 32, selectTileY * 32, 32.0f, 32.0f, (Color) { 255, 255, 255, 50 });
 		}
 		// render player
 
@@ -493,6 +522,8 @@ int main(void) {
 	//	int px = (player.position.x + 16) / 32;
 	//	int py = (player.position.y + 32) / 32;
 	//	DrawRectangle(px * 32, py * 32, 32, 32, (Color){255, 0, 0, 100});
+
+		DrawText(hoveredGO.Desc, player.position.x, player.position.y - 12, 8, LIGHTGRAY);
 		EndMode2D();
 		DrawRectangle(0, 0, screenWidth, screenHeight, (Color) { 0, 0, 0, 100 });
 
@@ -507,43 +538,44 @@ int main(void) {
 			(Vector2) { 0.0f, 0.0f }, 0.0f, WHITE);
 
 		EndShaderMode();
-		DrawRectangle(playerTiles[0] * 8, (playerTiles[1] * 8) + 824.0f, 8, 8, WHITE);
 
-	//	DrawText(TextFormat("DayTimer: %d", dayTimer), 190, 200, 20, LIGHTGRAY);
 		// UI Drawing
 		// hard coding slots for now
+		if (buildMode) {
 
-		float xOffset = (screenWidth - (128.0f * 9)) / 2;
-		for (int i = 0; i < 9; i++) {
-			float size = 96.0f;
-			float lineWidth = 4.0f;
-			Color c = (Color){ 0, 0, 0, 255 };
-			if (slotSelected == i) {
-				size = 96.0f;
-				lineWidth = 8.0f;
-				c = (Color){ 255, 255, 255, 255 };
+			DrawRectangle(playerTiles[0] * 8, (playerTiles[1] * 8) + 824.0f, 8, 8, WHITE);
+			float xOffset = (screenWidth - (128.0f * 9)) / 2;
+			for (int i = 0; i < 9; i++) {
+				float size = 96.0f;
+				float lineWidth = 4.0f;
+				Color c = (Color){ 0, 0, 0, 255 };
+				if (slotSelected == i) {
+					size = 96.0f;
+					lineWidth = 8.0f;
+					c = (Color){ 255, 255, 255, 255 };
+				}
+
+				DrawTexturePro(invRows[selectedRow].item[i].tex,
+					invRows[selectedRow].item[i].rect,
+					(Rectangle) {
+					xOffset + (128.0f * i), screenHeight - 128.0f, 96.0f, 96.0f
+				},
+					(Vector2) {
+					0.0f, 0.0f
+				}, 0.0f, WHITE);
+
+				DrawRectangleLinesEx((Rectangle) { xOffset + (128.0f * i), screenHeight - 128.0f, size, size }, lineWidth, c);
 			}
-
-			DrawTexturePro(invRows[selectedRow].item[i].tex,
-				invRows[selectedRow].item[i].rect,
-				(Rectangle) {
-				xOffset + (128.0f * i), screenHeight - 128.0f, 96.0f, 96.0f
-			},
-				(Vector2) {
-				0.0f, 0.0f
-			}, 0.0f, WHITE);
-
-			DrawRectangleLinesEx((Rectangle) { xOffset + (128.0f * i), screenHeight - 128.0f, size, size }, lineWidth, c);
 		}
 
 		DrawTextureRec(cursor_tex, cursorRect, GetMousePosition(), WHITE);
-
 		EndDrawing();
 	}
 	UnloadTexture(body_tex);
 	UnloadTexture(head_tex);
 	UnloadTexture(cloak_tex);
 	UnloadTexture(glove_tex);
+	UnloadTexture(bow_tex);
 	UnloadTexture(shadow_tex);
 	UnloadTexture(particles_tex);
 	UnloadTexture(grassMap);
